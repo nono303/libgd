@@ -194,6 +194,7 @@ char* strrstr (char* haystack, char* needle)
 }
 
 
+# ifndef HAVE_MKDTEMP
 static char *
 mkdtemp (char *tmpl)
 {
@@ -229,6 +230,7 @@ mkdtemp (char *tmpl)
 	errno = EEXIST;
 	return NULL;
 }
+# endif /* mkdtemp */
 #endif
 
 const char *gdTestTempDir(void)
