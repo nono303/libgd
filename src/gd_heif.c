@@ -308,7 +308,7 @@ static int _gdImageHeifCtx(gdImagePtr im, gdIOCtx *outfile, int quality, gdHeifC
 	}
 	err = heif_context_get_encoder_for_format(heif_ctx, (enum heif_compression_format)codec, &heif_enc);
 	if (err.code != heif_error_Ok) {
-		gd_error("gd-heif encoder acquisition failed (missing codec support?)\n");
+		gd_error("gd-heif encoder acquisition failed (missing codec support?: code: %d, subcode: %d, message: %s)\n", err.code, err.subcode, err.message);
 		heif_context_free(heif_ctx);
 		return GD_FALSE;
 	}
@@ -439,6 +439,11 @@ BGD_DECLARE(void) gdImageHeifCtx(gdImagePtr im, gdIOCtx *outfile, int quality, g
     _quality_ should be a value in the range 0-100, higher quality values
     usually implying both higher quality and larger image sizes or 200, for
     lossless codec.
+
+	For _codec_, the default and most widely supported option is
+	GD_HEIF_CODEC_HEVC. GD_HEIF_CODEC_AV1 is a newer codec that may not be
+	supported by all decoders but can offer better compression efficiency. 
+	They must be installed on the system and enabled at compile time to be used.
 
   Variants:
 
