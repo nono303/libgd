@@ -1017,6 +1017,14 @@ BGD_DECLARE(int) gdImageColorReplace (gdImagePtr im, int src, int dst)
 
 /*
 	Function: gdImageColorReplaceThreshold
+	Note: threshold semantics changed in versions >=2.3.4 — the value now scales
+	linearly with perceptual color distance. Callers using threshold values
+	tuned against the old behavior should apply new_t = sqrt(old_t / 100) * 100
+	to approximate the previous behavior. This is due to a bug fix in the color
+	distance calculation, which previously did not take the square root 
+	of the sum of squares, and thus returned a value that was the square 
+	of the actual perceptual color distance.
+	The new behavior is more intuitive and consistent with common color distance metrics
 */
 BGD_DECLARE(int) gdImageColorReplaceThreshold (gdImagePtr im, int src, int dst, float threshold)
 {
