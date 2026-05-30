@@ -13,6 +13,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "gd.h"
 #include "gd_errors.h"
 #include "gdhelpers.h"
@@ -254,10 +255,23 @@ static struct heif_error _gdImageWriteHeif(struct heif_context *heif_ctx, const 
 	ARG_NOT_USED(heif_ctx);
 	gdIOCtx *outfile;
 	struct heif_error err;
+	int bytes_written;
 
 	outfile = (gdIOCtx *)userdata;
+	if (outfile == NULL || data == NULL || size > INT_MAX) {
+		err.code = heif_error_Encoding_error;
+		err.subcode = heif_suberror_Cannot_write_output_data;
+		err.message = "gd-heif write callback received invalid arguments";
+		return err;
+	}
 
-	gdPutBuf(data, size, outfile);
+	bytes_written = gdPutBuf(data, (int)size, outfile);
+	if (bytes_written != (int)size) {
+		err.code = heif_error_Encoding_error;
+		err.subcode = heif_suberror_Cannot_write_output_data;
+		err.message = "gd-heif failed to write output data";
+		return err;
+	}
 
 	err.code = heif_error_Ok;
 	err.subcode = heif_suberror_Unspecified;
@@ -396,6 +410,10 @@ static int _gdImageHeifCtx(gdImagePtr im, gdIOCtx *outfile, int quality, gdHeifC
 
 	heif_image_release(heif_im);
 	heif_context_free(heif_ctx);
+	if (err.code != heif_error_Ok) {
+		gd_error("gd-heif write failed (code: %d, subcode: %d, message: %s)\n", err.code, err.subcode, err.message);
+		return GD_FALSE;
+	}
 
 	return GD_TRUE;
 }
