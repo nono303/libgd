@@ -143,6 +143,11 @@ void * gdCacheGet(gdCache_head_t *head, void *keydata)
 			prevprev->next = NULL;
 		}
 		elem = prev;
+		if (!elem) {
+			/* Happen only with an invalid cache size (<= 0). Bad state but still worth handling it here before deref */
+			(*(head->gdCacheRelease))(userdata);
+			return NULL;
+		}
 		(*(head->gdCacheRelease))(elem->userdata);
 	}
 
