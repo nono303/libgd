@@ -26,8 +26,17 @@ static int has_webp_suffix(const char *name)
 
 static int is_directory(const char *path)
 {
+#if defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)
+	WIN32_FILE_ATTRIBUTE_DATA data;
+
+	if (!GetFileAttributesEx(path, GetFileExInfoStandard, &data)) {
+		return 0;
+	}
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
 	struct stat st;
 	return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+#endif
 }
 
 static unsigned char *read_file(const char *path, int *size)
