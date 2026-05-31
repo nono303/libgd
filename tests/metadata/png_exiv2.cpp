@@ -77,10 +77,10 @@ int main(void)
 	gdImagePtr decoded;
 	gdImageMetadata *metadata;
 	gdIOCtx *in_ctx;
-	FILE *out_file;
-	gdIOCtx *out_ctx;
 	void *png;
+	void *roundtrip;
 	int size = 0;
+	int roundtrip_size = 0;
 	char *source_path;
 	char *roundtrip_path;
 	std::vector<unsigned char> source_data;
@@ -121,16 +121,14 @@ int main(void)
 	gdTestAssert(exif != NULL);
 	gdTestAssert(exif_size > 8);
 
-	out_file = fopen(roundtrip_path, "wb");
-	gdTestAssert(out_file != NULL);
-	out_ctx = gdNewFileCtx(out_file);
-	gdTestAssert(out_ctx != NULL);
-	gdImagePngCtxWithMetadata(decoded, out_ctx, metadata);
-	out_ctx->gd_free(out_ctx);
-	fclose(out_file);
+	roundtrip = gdImagePngPtrWithMetadata(decoded, &roundtrip_size, metadata);
+	gdTestAssert(roundtrip != NULL);
+	gdTestAssert(roundtrip_size > 0);
+	gdTestAssert(write_file(roundtrip_path, roundtrip, roundtrip_size));
 
 	gdTestAssert(exiv2_read_expected_exif(roundtrip_path));
 
+	gdFree(roundtrip);
 	gdImageDestroy(decoded);
 	gdImageDestroy(im);
 	gdImageMetadataFree(metadata);
