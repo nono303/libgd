@@ -32,19 +32,19 @@ int main()
     gdTestAssert(data != NULL);
     gdTestAssert(data[0] == 'B' && data[1] == 'M');
     bfSize = get_field(data, OFFSET_BF_SIZE);
-    gdTestAssertMsg(bfSize == size, "expected %d, got %u", size, bfSize);
+    gdTestAssertMsg(bfSize == (unsigned int)size, "expected %d, got %u", size, bfSize);
     bfOffBits = get_field(data, OFFSET_BF_OFF_BITS);
     biSizeImage = get_field(data, OFFSET_BI_SIZE_IMAGE);
-    gdTestAssertMsg(biSizeImage == size - bfOffBits, "expected %u, got %u", size - bfOffBits, biSizeImage);
+    gdTestAssertMsg(biSizeImage == (unsigned int)size - bfOffBits, "expected %u, got %u", size - bfOffBits, biSizeImage);
 
     data = gdImageBmpPtr(im, &size, 1);
     gdTestAssert(data != NULL);
     gdTestAssert(data[0] == 'B' && data[1] == 'M');
     bfSize = get_field(data, OFFSET_BF_SIZE);
-    gdTestAssertMsg(bfSize == size, "expected %d, got %u", size, bfSize);
+    gdTestAssertMsg(bfSize == (unsigned int)size, "expected %d, got %u", size, bfSize);
     bfOffBits = get_field(data, OFFSET_BF_OFF_BITS);
     biSizeImage = get_field(data, OFFSET_BI_SIZE_IMAGE);
-    gdTestAssertMsg(biSizeImage == size - bfOffBits, "expected %u, got %u", size - bfOffBits, biSizeImage);
+    gdTestAssertMsg(biSizeImage == (unsigned int)size - bfOffBits, "expected %u, got %u", (unsigned int)size - bfOffBits, biSizeImage);
 
     gdImageDestroy(im);
     return gdNumFailures();

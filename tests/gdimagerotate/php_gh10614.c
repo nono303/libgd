@@ -14,7 +14,7 @@ int main()
 	FILE *fp;
 	char *path, buf[128];
 	const int squareAngles[] = { 0, 90, 180, 270 };
-	int i;
+	unsigned int i;
 
 	fp = gdTestFileOpen2("gdimagerotate", "php_gh10614.png");
 	src = gdImageCreateFromPng(fp);

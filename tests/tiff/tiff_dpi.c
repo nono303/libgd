@@ -57,12 +57,12 @@ int main()
 		goto door1;
 	}
 
-	if (dst->res_x != res_x) {
+	if (dst->res_x != (unsigned int)res_x) {
 		status = 1;
 		gdTestErrorMsg("mismatch in res_x (got %d, expected %d)\n", dst->res_x, res_x);
 	}
 
-	if (dst->res_y != res_y) {
+	if (dst->res_y != (unsigned int)res_y) {
 		status = 1;
 		gdTestErrorMsg("mismatch in res_y (got %d, expected %d)\n", dst->res_y, res_y);
 	}

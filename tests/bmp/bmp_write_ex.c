@@ -101,7 +101,7 @@ static void assert_roundtrip(gdImagePtr im, int bpp, int compression, int flags,
 	gdImagePtr actual;
 
 	data = gdImageBmpPtrEx(im, &size, bpp, compression, flags);
-	assert_bmp_fields((unsigned char *) data, size, bpp ? bpp : get_word((unsigned char *) data, OFFSET_BI_BIT_COUNT),
+	assert_bmp_fields((unsigned char *) data, size, bpp ? (unsigned int)bpp : get_word((unsigned char *) data, OFFSET_BI_BIT_COUNT),
 		expected_compression, header_size);
 	actual = gdImageCreateFromBmpPtr(size, data);
 	gdTestAssertMsg(actual != NULL, "failed to read generated BMP");

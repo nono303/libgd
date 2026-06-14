@@ -2,55 +2,54 @@
 #include "config.h"
 #endif
 
-#include <stdio.h>
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include "gd.h"
 #include "gd_errors.h"
 #include "gd_intern.h"
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* JCE: Arrange HAVE_LIBPNG so that it can be set in gd.h */
 #ifdef HAVE_LIBPNG
 
 #include "gdhelpers.h"
-#include "png.h"		/* includes zlib.h and setjmp.h */
+#include "png.h" /* includes zlib.h and setjmp.h */
 #include "zlib.h"
 
 #define TRUE 1
 #define FALSE 0
 
-static const unsigned char gdPngSignature[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+static const unsigned char gdPngSignature[8] = {137, 80, 78, 71,
+												13,	 10, 26, 10};
 
-static unsigned int gdPngGetUint32(const unsigned char *data)
-{
-	return ((unsigned int)data[0] << 24) | ((unsigned int)data[1] << 16) | ((unsigned int)data[2] << 8) | (unsigned int)data[3];
+static unsigned int gdPngGetUint32(const unsigned char *data) {
+	return ((unsigned int)data[0] << 24) | ((unsigned int)data[1] << 16) |
+		   ((unsigned int)data[2] << 8) | (unsigned int)data[3];
 }
 
-static void gdPngPutUint32(unsigned char *data, size_t value)
-{
+static void gdPngPutUint32(unsigned char *data, size_t value) {
 	data[0] = (unsigned char)((value >> 24) & 0xff);
 	data[1] = (unsigned char)((value >> 16) & 0xff);
 	data[2] = (unsigned char)((value >> 8) & 0xff);
 	data[3] = (unsigned char)(value & 0xff);
 }
 
-static int gdPngChunkIs(const unsigned char *type, const char *name)
-{
+static int gdPngChunkIs(const unsigned char *type, const char *name) {
 	return memcmp(type, name, 4) == 0;
 }
 
-static int gdPngIsXmpItxt(const unsigned char *data, size_t size)
-{
+static int gdPngIsXmpItxt(const unsigned char *data, size_t size) {
 	static const char keyword[] = "XML:com.adobe.xmp";
 	size_t keyword_size = sizeof(keyword) - 1;
 
-	return size > keyword_size && memcmp(data, keyword, keyword_size) == 0 && data[keyword_size] == 0;
+	return size > keyword_size && memcmp(data, keyword, keyword_size) == 0 &&
+		   data[keyword_size] == 0;
 }
 
-static int gdPngIsRawProfile(const unsigned char *data, size_t size, const char *profile_type)
-{
+static int gdPngIsRawProfile(const unsigned char *data, size_t size,
+							 const char *profile_type) {
 	static const char prefix[] = "Raw profile type ";
 	size_t prefix_size = sizeof(prefix) - 1;
 	size_t profile_type_size;
@@ -61,13 +60,13 @@ static int gdPngIsRawProfile(const unsigned char *data, size_t size, const char 
 
 	profile_type_size = strlen(profile_type);
 	return size > prefix_size + profile_type_size &&
-	       memcmp(data, prefix, prefix_size) == 0 &&
-	       memcmp(data + prefix_size, profile_type, profile_type_size) == 0 &&
-	       data[prefix_size + profile_type_size] == 0;
+		   memcmp(data, prefix, prefix_size) == 0 &&
+		   memcmp(data + prefix_size, profile_type, profile_type_size) == 0 &&
+		   data[prefix_size + profile_type_size] == 0;
 }
 
-static int gdPngSetTextProfile(gdImageMetadata *metadata, const unsigned char *data, size_t size)
-{
+static int gdPngSetTextProfile(gdImageMetadata *metadata,
+							   const unsigned char *data, size_t size) {
 	const unsigned char *nul;
 	size_t keyword_size;
 	char *key;
@@ -92,8 +91,9 @@ static int gdPngSetTextProfile(gdImageMetadata *metadata, const unsigned char *d
 	return status;
 }
 
-static int gdPngReadMetadataFromMemory(const unsigned char *png, size_t png_size, gdImageMetadata *metadata)
-{
+static int gdPngReadMetadataFromMemory(const unsigned char *png,
+									   size_t png_size,
+									   gdImageMetadata *metadata) {
 	size_t pos = 8;
 
 	if (metadata == NULL) {
@@ -114,15 +114,23 @@ static int gdPngReadMetadataFromMemory(const unsigned char *png, size_t png_size
 		}
 
 		if (gdPngChunkIs(type, "eXIf")) {
-			status = gdImageMetadataSetProfile(metadata, "exif", chunk_data, chunk_size);
-		} else if (gdPngChunkIs(type, "zTXt") && gdPngIsRawProfile(chunk_data, chunk_size, "exif")) {
-			status = gdImageMetadataSetProfile(metadata, "exif", chunk_data, chunk_size);
+			status = gdImageMetadataSetProfile(metadata, "exif", chunk_data,
+											   chunk_size);
+		} else if (gdPngChunkIs(type, "zTXt") &&
+				   gdPngIsRawProfile(chunk_data, chunk_size, "exif")) {
+			status = gdImageMetadataSetProfile(metadata, "exif", chunk_data,
+											   chunk_size);
 		} else if (gdPngChunkIs(type, "iCCP")) {
-			status = gdImageMetadataSetProfile(metadata, "icc", chunk_data, chunk_size);
-		} else if (gdPngChunkIs(type, "iTXt") && gdPngIsXmpItxt(chunk_data, chunk_size)) {
-			status = gdImageMetadataSetProfile(metadata, "xmp", chunk_data, chunk_size);
-		} else if (gdPngChunkIs(type, "zTXt") && gdPngIsRawProfile(chunk_data, chunk_size, "xmp")) {
-			status = gdImageMetadataSetProfile(metadata, "xmp", chunk_data, chunk_size);
+			status = gdImageMetadataSetProfile(metadata, "icc", chunk_data,
+											   chunk_size);
+		} else if (gdPngChunkIs(type, "iTXt") &&
+				   gdPngIsXmpItxt(chunk_data, chunk_size)) {
+			status = gdImageMetadataSetProfile(metadata, "xmp", chunk_data,
+											   chunk_size);
+		} else if (gdPngChunkIs(type, "zTXt") &&
+				   gdPngIsRawProfile(chunk_data, chunk_size, "xmp")) {
+			status = gdImageMetadataSetProfile(metadata, "xmp", chunk_data,
+											   chunk_size);
 		} else if (gdPngChunkIs(type, "tEXt")) {
 			status = gdPngSetTextProfile(metadata, chunk_data, chunk_size);
 		}
@@ -139,8 +147,9 @@ static int gdPngReadMetadataFromMemory(const unsigned char *png, size_t png_size
 	return GD_META_ERR_PARSE;
 }
 
-static int gdPngAppendChunk(unsigned char *out, size_t *out_pos, const char *type, const unsigned char *data, size_t size)
-{
+static int gdPngAppendChunk(unsigned char *out, size_t *out_pos,
+							const char *type, const unsigned char *data,
+							size_t size) {
 	uLong crc;
 
 	if (data == NULL || size > UINT32_MAX) {
@@ -159,8 +168,8 @@ static int gdPngAppendChunk(unsigned char *out, size_t *out_pos, const char *typ
 	return GD_META_OK;
 }
 
-static int gdPngMetadataChunkSize(size_t *total, const unsigned char *data, size_t size)
-{
+static int gdPngMetadataChunkSize(size_t *total, const unsigned char *data,
+								  size_t size) {
 	if (data == NULL) {
 		return GD_META_OK;
 	}
@@ -171,17 +180,22 @@ static int gdPngMetadataChunkSize(size_t *total, const unsigned char *data, size
 	return GD_META_OK;
 }
 
-static int gdPngShouldSkipChunk(const unsigned char *type, const unsigned char *data, size_t size, const gdImageMetadata *metadata)
-{
+static int gdPngShouldSkipChunk(const unsigned char *type,
+								const unsigned char *data, size_t size,
+								const gdImageMetadata *metadata) {
 	return (gdImageMetadataGetProfile(metadata, "exif", NULL) != NULL &&
-	        (gdPngChunkIs(type, "eXIf") || (gdPngChunkIs(type, "zTXt") && gdPngIsRawProfile(data, size, "exif")))) ||
-	       (gdImageMetadataGetProfile(metadata, "icc", NULL) != NULL && gdPngChunkIs(type, "iCCP")) ||
-	       (gdImageMetadataGetProfile(metadata, "xmp", NULL) != NULL &&
-	        ((gdPngChunkIs(type, "iTXt") && gdPngIsXmpItxt(data, size)) || (gdPngChunkIs(type, "zTXt") && gdPngIsRawProfile(data, size, "xmp"))));
+			(gdPngChunkIs(type, "eXIf") ||
+			 (gdPngChunkIs(type, "zTXt") &&
+			  gdPngIsRawProfile(data, size, "exif")))) ||
+		   (gdImageMetadataGetProfile(metadata, "icc", NULL) != NULL &&
+			gdPngChunkIs(type, "iCCP")) ||
+		   (gdImageMetadataGetProfile(metadata, "xmp", NULL) != NULL &&
+			((gdPngChunkIs(type, "iTXt") && gdPngIsXmpItxt(data, size)) ||
+			 (gdPngChunkIs(type, "zTXt") &&
+			  gdPngIsRawProfile(data, size, "xmp"))));
 }
 
-static void *gdPngReadCtxToMemory(gdIOCtx *infile, int *size)
-{
+static void *gdPngReadCtxToMemory(gdIOCtx *infile, int *size) {
 	enum { GD_PNG_ALLOC_STEP = 8192 };
 	unsigned char *data = NULL;
 	int logical_size = 0;
@@ -258,12 +272,9 @@ static void *gdPngReadCtxToMemory(gdIOCtx *infile, int *size)
 #ifdef PNG_SETJMP_SUPPORTED
 typedef struct _jmpbuf_wrapper {
 	jmp_buf jmpbuf;
-}
-jmpbuf_wrapper;
+} jmpbuf_wrapper;
 
-static void
-gdPngErrorHandler (png_structp png_ptr, png_const_charp msg)
-{
+static void gdPngErrorHandler(png_structp png_ptr, png_const_charp msg) {
 	jmpbuf_wrapper *jmpbuf_ptr;
 
 	/* This function, aside from the extra step of retrieving the "error
@@ -277,110 +288,105 @@ gdPngErrorHandler (png_structp png_ptr, png_const_charp msg)
 
 	gd_error_ex(GD_WARNING, "gd-png: fatal libpng error: %s\n", msg);
 
-	jmpbuf_ptr = png_get_error_ptr (png_ptr);
-	if (jmpbuf_ptr == NULL) {				/* we are completely hosed now */
-		gd_error_ex(GD_ERROR, "gd-png: EXTREMELY fatal error: jmpbuf unrecoverable; terminating.\n");
-		exit (99);
+	jmpbuf_ptr = png_get_error_ptr(png_ptr);
+	if (jmpbuf_ptr == NULL) { /* we are completely hosed now */
+		gd_error_ex(GD_ERROR, "gd-png: EXTREMELY fatal error: jmpbuf "
+							  "unrecoverable; terminating.\n");
+		exit(99);
 	}
 
-	longjmp (jmpbuf_ptr->jmpbuf, 1);
+	longjmp(jmpbuf_ptr->jmpbuf, 1);
 }
 
-static void gdPngWarningHandler (UNUSED_PARAM(png_structp png_ptr), png_const_charp msg)
-{
+static void gdPngWarningHandler(UNUSED_PARAM(png_structp png_ptr),
+								png_const_charp msg) {
 	gd_error_ex(GD_WARNING, "gd-png: libpng warning: %s", msg);
 }
 #endif
 
-static void
-gdPngReadData (png_structp png_ptr, png_bytep data, png_size_t length)
-{
+static void gdPngReadData(png_structp png_ptr, png_bytep data,
+						  png_size_t length) {
 	int check;
-	check = gdGetBuf (data, length, (gdIOCtx *) png_get_io_ptr (png_ptr));
+	check = gdGetBuf(data, length, (gdIOCtx *)png_get_io_ptr(png_ptr));
 	if (check != (int)length) {
 		png_error(png_ptr, "Read Error: truncated data");
 	}
 }
 
-static void
-gdPngWriteData (png_structp png_ptr, png_bytep data, png_size_t length)
-{
-	gdPutBuf (data, length, (gdIOCtx *) png_get_io_ptr (png_ptr));
+static void gdPngWriteData(png_structp png_ptr, png_bytep data,
+						   png_size_t length) {
+	gdPutBuf(data, length, (gdIOCtx *)png_get_io_ptr(png_ptr));
 }
 
-static void
-gdPngFlushData (png_structp png_ptr)
-{
-	(void)png_ptr;
-}
+static void gdPngFlushData(png_structp png_ptr) { (void)png_ptr; }
 
 /*
   Function: gdImageCreateFromPng
 
-    <gdImageCreateFromPng> is called to load images from PNG format
-    files. Invoke <gdImageCreateFromPng> with an already opened
-    pointer to a FILE containing the desired
-    image. <gdImageCreateFromPng> returns a <gdImagePtr> to the new
-    image, or NULL if unable to load the image (most often because the
-    file is corrupt or does not contain a PNG
-    image). <gdImageCreateFromPng> does not close the file. You can
-    inspect the sx and sy members of the image to determine its
-    size. The image must eventually be destroyed using
-    gdImageDestroy().
+	<gdImageCreateFromPng> is called to load images from PNG format
+	files. Invoke <gdImageCreateFromPng> with an already opened
+	pointer to a FILE containing the desired
+	image. <gdImageCreateFromPng> returns a <gdImagePtr> to the new
+	image, or NULL if unable to load the image (most often because the
+	file is corrupt or does not contain a PNG
+	image). <gdImageCreateFromPng> does not close the file. You can
+	inspect the sx and sy members of the image to determine its
+	size. The image must eventually be destroyed using
+	gdImageDestroy().
 
-    If the PNG image being loaded is a truecolor image, the resulting
-    gdImagePtr will refer to a truecolor image. If the PNG image being
-    loaded is a palette or grayscale image, the resulting gdImagePtr
-    will refer to a palette image. gd retains only 8 bits of
-    resolution for each of the red, green and blue channels, and only
-    7 bits of resolution for the alpha channel. The former restriction
-    affects only a handful of very rare 48-bit color and 16-bit
-    grayscale PNG images. The second restriction affects all
-    semitransparent PNG images, but the difference is essentially
-    invisible to the eye. 7 bits of alpha channel resolution is, in
-    practice, quite a lot.
+	If the PNG image being loaded is a truecolor image, the resulting
+	gdImagePtr will refer to a truecolor image. If the PNG image being
+	loaded is a palette or grayscale image, the resulting gdImagePtr
+	will refer to a palette image. gd retains only 8 bits of
+	resolution for each of the red, green and blue channels, and only
+	7 bits of resolution for the alpha channel. The former restriction
+	affects only a handful of very rare 48-bit color and 16-bit
+	grayscale PNG images. The second restriction affects all
+	semitransparent PNG images, but the difference is essentially
+	invisible to the eye. 7 bits of alpha channel resolution is, in
+	practice, quite a lot.
 
   Variants:
 
-    <gdImageCreateFromPngPtr> creates an image from PNG data (i.e. the
-    contents of a PNG file) already in memory.
+	<gdImageCreateFromPngPtr> creates an image from PNG data (i.e. the
+	contents of a PNG file) already in memory.
 
-    <gdImageCreateFromPngCtx> reads in an image using the functions in
-    a <gdIOCtx> struct.
+	<gdImageCreateFromPngCtx> reads in an image using the functions in
+	a <gdIOCtx> struct.
 
-    <gdImageCreateFromPngSource> is similar to
-    <gdImageCreateFromPngCtx> but uses the old <gdSource> interface.
-    It is *obsolete*.
+	<gdImageCreateFromPngSource> is similar to
+	<gdImageCreateFromPngCtx> but uses the old <gdSource> interface.
+	It is *obsolete*.
 
   Parameters:
 
-    infile - The input FILE pointer.
+	infile - The input FILE pointer.
 
   Returns:
 
-    A pointer to the new image or NULL if an error occurred.
+	A pointer to the new image or NULL if an error occurred.
 
   Example:
-    (start code)
+	(start code)
 
-    gdImagePtr im;
-    ... inside a function ...
-    FILE *in;
-    in = fopen("mypng.png", "rb");
-    im = gdImageCreateFromPng(in);
-    fclose(in);
-    // ... Use the image ...
-    gdImageDestroy(im);
-
-    (end code)
- */
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPng (FILE * inFile)
-{
 	gdImagePtr im;
-	gdIOCtx *in = gdNewFileCtx (inFile);
-	if (in == NULL) return NULL;
-	im = gdImageCreateFromPngCtx (in);
-	in->gd_free (in);
+	... inside a function ...
+	FILE *in;
+	in = fopen("mypng.png", "rb");
+	im = gdImageCreateFromPng(in);
+	fclose(in);
+	// ... Use the image ...
+	gdImageDestroy(im);
+
+	(end code)
+ */
+BGD_DECLARE(gdImagePtr) gdImageCreateFromPng(FILE *inFile) {
+	gdImagePtr im;
+	gdIOCtx *in = gdNewFileCtx(inFile);
+	if (in == NULL)
+		return NULL;
+	im = gdImageCreateFromPngCtx(in);
+	in->gd_free(in);
 	return im;
 }
 
@@ -389,39 +395,41 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPng (FILE * inFile)
 
   See <gdImageCreateFromPng>.
 */
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngPtr (int size, void *data)
-{
+BGD_DECLARE(gdImagePtr) gdImageCreateFromPngPtr(int size, void *data) {
 	gdImagePtr im;
-	gdIOCtx *in = gdNewDynamicCtxEx (size, data, 0);
-	if(!in)
-		return 0;
-	im = gdImageCreateFromPngCtx (in);
-	in->gd_free (in);
-	return im;
-}
-
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngPtrWithMetadata(int size, void *data, gdImageMetadata *metadata)
-{
-	gdImagePtr im;
-	gdIOCtx *in;
-
-	if (metadata != NULL) {
-		int status = gdPngReadMetadataFromMemory((const unsigned char *)data, size, metadata);
-		if (status != GD_META_OK) {
-			return NULL;
-		}
-	}
-
-	in = gdNewDynamicCtxEx(size, data, 0);
-	if(!in)
+	gdIOCtx *in = gdNewDynamicCtxEx(size, data, 0);
+	if (!in)
 		return 0;
 	im = gdImageCreateFromPngCtx(in);
 	in->gd_free(in);
 	return im;
 }
 
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtxWithMetadata(gdIOCtx *infile, gdImageMetadata *metadata)
-{
+BGD_DECLARE(gdImagePtr)
+gdImageCreateFromPngPtrWithMetadata(int size, void *data,
+									gdImageMetadata *metadata) {
+	gdImagePtr im;
+	gdIOCtx *in;
+
+	if (metadata != NULL) {
+		int status = gdPngReadMetadataFromMemory((const unsigned char *)data,
+												 size, metadata);
+		if (status != GD_META_OK) {
+			return NULL;
+		}
+	}
+
+	in = gdNewDynamicCtxEx(size, data, 0);
+	if (!in)
+		return 0;
+	im = gdImageCreateFromPngCtx(in);
+	in->gd_free(in);
+	return im;
+}
+
+BGD_DECLARE(gdImagePtr)
+gdImageCreateFromPngCtxWithMetadata(gdIOCtx *infile,
+									gdImageMetadata *metadata) {
 	void *data;
 	int size;
 	gdImagePtr im;
@@ -436,8 +444,6 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtxWithMetadata(gdIOCtx *infile, gdI
 	return im;
 }
 
-
-
 /* This routine is based in part on the Chapter 13 demo code in
  * "PNG: The Definitive Guide" (http://www.libpng.org/pub/png/book/).
  */
@@ -447,8 +453,7 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtxWithMetadata(gdIOCtx *infile, gdI
 
   See <gdImageCreateFromPng>.
 */
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
-{
+BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx(gdIOCtx *infile) {
 	png_byte sig[8];
 #ifdef PNG_SETJMP_SUPPORTED
 	jmpbuf_wrapper jbw;
@@ -471,32 +476,33 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 
 	/* Make sure the signature can't match by dumb luck -- TBB */
 	/* GRR: isn't sizeof(infile) equal to the size of the pointer? */
-	memset (sig, 0, sizeof (sig));
+	memset(sig, 0, sizeof(sig));
 
 	/* first do a quick check that the file really is a PNG image; could
 	 * have used slightly more general png_sig_cmp() function instead */
-	if (gdGetBuf (sig, 8, infile) < 8) {
+	if (gdGetBuf(sig, 8, infile) < 8) {
 		return NULL;
 	}
 
 	if (png_sig_cmp(sig, 0, 8) != 0) { /* bad signature */
-		return NULL;		/* bad signature */
+		return NULL;				   /* bad signature */
 	}
 
 #ifdef PNG_SETJMP_SUPPORTED
-	png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, &jbw, gdPngErrorHandler, gdPngWarningHandler);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, &jbw,
+									 gdPngErrorHandler, gdPngWarningHandler);
 #else
-	png_ptr = png_create_read_struct (PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 #endif
 	if (png_ptr == NULL) {
 		gd_error("gd-png error: cannot allocate libpng main struct\n");
 		return NULL;
 	}
 
-	info_ptr = png_create_info_struct (png_ptr);
+	info_ptr = png_create_info_struct(png_ptr);
 	if (info_ptr == NULL) {
 		gd_error("gd-png error: cannot allocate libpng info struct\n");
-		png_destroy_read_struct (&png_ptr, NULL, NULL);
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
 
 		return NULL;
 	}
@@ -513,24 +519,26 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 #ifdef PNG_SETJMP_SUPPORTED
 	if (setjmp(jbw.jmpbuf)) {
 		gd_error("gd-png error: setjmp returns error condition 1\n");
-		png_destroy_read_struct (&png_ptr, &info_ptr, NULL);
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
 		return NULL;
 	}
 #endif
 
-	png_set_sig_bytes (png_ptr, 8);	/* we already read the 8 signature bytes */
+	png_set_sig_bytes(png_ptr, 8); /* we already read the 8 signature bytes */
 
-	png_set_read_fn (png_ptr, (void *) infile, gdPngReadData);
+	png_set_read_fn(png_ptr, (void *)infile, gdPngReadData);
 	png_set_user_limits(png_ptr, 0x7fffffffL, 0x7fffffffL);
-	png_read_info (png_ptr, info_ptr);	/* read all PNG info up to image data */
+	png_read_info(png_ptr, info_ptr); /* read all PNG info up to image data */
 
-	png_get_IHDR (png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, NULL, NULL);
-	if ((color_type == PNG_COLOR_TYPE_RGB) || (color_type == PNG_COLOR_TYPE_RGB_ALPHA)
-	        || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
-		im = gdImageCreateTrueColor ((int) width, (int) height);
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type,
+				 &interlace_type, NULL, NULL);
+	if ((color_type == PNG_COLOR_TYPE_RGB) ||
+		(color_type == PNG_COLOR_TYPE_RGB_ALPHA) ||
+		color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+		im = gdImageCreateTrueColor((int)width, (int)height);
 	} else {
-		im = gdImageCreate ((int) width, (int) height);
+		im = gdImageCreate((int)width, (int)height);
 	}
 	if (im == NULL) {
 		gd_error("gd-png error: cannot allocate gdImage struct\n");
@@ -538,9 +546,9 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 	}
 
 	if (bit_depth == 16) {
-		png_set_strip_16 (png_ptr);
+		png_set_strip_16(png_ptr);
 	} else if (bit_depth < 8) {
-		png_set_packing (png_ptr);	/* expand to 1 byte per pixel */
+		png_set_packing(png_ptr); /* expand to 1 byte per pixel */
 	}
 
 	/* setjmp() must be called in every non-callback function that calls a
@@ -570,11 +578,11 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 
 	switch (color_type) {
 	case PNG_COLOR_TYPE_PALETTE:
-		png_get_PLTE (png_ptr, info_ptr, &palette, &num_palette);
+		png_get_PLTE(png_ptr, info_ptr, &palette, &num_palette);
 #ifdef DEBUG
 		gd_error("gd-png color_type is palette, colors: %d\n", num_palette);
 #endif /* DEBUG */
-		if (png_get_valid (png_ptr, info_ptr, PNG_INFO_tRNS)) {
+		if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
 			/* gd 2.0: we support this rather thoroughly now. Grab the
 			 * first fully transparent entry, if any, as the value of
 			 * the simple-transparency index, mostly for backwards
@@ -582,7 +590,7 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 			 * really at these days.
 			 */
 			int firstZero = 1;
-			png_get_tRNS (png_ptr, info_ptr, &trans, &num_trans, NULL);
+			png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, NULL);
 			for (i = 0; i < num_trans; ++i) {
 				im->alpha[i] = gdAlphaMax - (trans[i] >> 1);
 				if ((trans[i] == 0) && (firstZero)) {
@@ -596,7 +604,7 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 
 	case PNG_COLOR_TYPE_GRAY:
 		/* create a fake palette and check for single-shade transparency */
-		if ((palette = (png_colorp) gdMalloc (256 * sizeof (png_color))) == NULL) {
+		if ((palette = (png_colorp)gdMalloc(256 * sizeof(png_color))) == NULL) {
 			gd_error("gd-png error: cannot allocate gray palette\n");
 			goto error;
 		}
@@ -613,9 +621,9 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 				palette[i].red = palette[i].green = palette[i].blue = i;
 			}
 		}
-		if (png_get_valid (png_ptr, info_ptr, PNG_INFO_tRNS)) {
-			png_get_tRNS (png_ptr, info_ptr, NULL, NULL, &trans_gray_rgb);
-			if (bit_depth == 16) {	/* png_set_strip_16() not yet in effect */
+		if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+			png_get_tRNS(png_ptr, info_ptr, NULL, NULL, &trans_gray_rgb);
+			if (bit_depth == 16) { /* png_set_strip_16() not yet in effect */
 				transparent = trans_gray_rgb->gray >> 8;
 			} else {
 				transparent = trans_gray_rgb->gray;
@@ -636,22 +644,23 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 	case PNG_COLOR_TYPE_GRAY_ALPHA:
 		png_set_gray_to_rgb(png_ptr);
 		// fall through
-		// Keep above comment, gcc recognizes it and silent its warning about fall through case here
+		// Keep above comment, gcc recognizes it and silent its warning about
+		// fall through case here
 	case PNG_COLOR_TYPE_RGB:
 	case PNG_COLOR_TYPE_RGB_ALPHA:
 		/* gd 2.0: we now support truecolor. See the comment above
 		   for a rare situation in which the transparent pixel may not
 		   work properly with 16-bit channels. */
-		if (png_get_valid (png_ptr, info_ptr, PNG_INFO_tRNS)) {
-			png_get_tRNS (png_ptr, info_ptr, NULL, NULL, &trans_color_rgb);
-			if (bit_depth == 16) {	/* png_set_strip_16() not yet in effect */
-				transparent = gdTrueColor (trans_color_rgb->red >> 8,
-				                           trans_color_rgb->green >> 8,
-				                           trans_color_rgb->blue >> 8);
+		if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+			png_get_tRNS(png_ptr, info_ptr, NULL, NULL, &trans_color_rgb);
+			if (bit_depth == 16) { /* png_set_strip_16() not yet in effect */
+				transparent = gdTrueColor(trans_color_rgb->red >> 8,
+										  trans_color_rgb->green >> 8,
+										  trans_color_rgb->blue >> 8);
 			} else {
-				transparent = gdTrueColor (trans_color_rgb->red,
-				                           trans_color_rgb->green,
-				                           trans_color_rgb->blue);
+				transparent =
+					gdTrueColor(trans_color_rgb->red, trans_color_rgb->green,
+								trans_color_rgb->blue);
 			}
 		}
 		break;
@@ -665,21 +674,21 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 	(void)png_set_interlace_handling(png_ptr);
 #endif
 
-	png_read_update_info (png_ptr, info_ptr);
+	png_read_update_info(png_ptr, info_ptr);
 
 	/* allocate space for the PNG image data */
-	rowbytes = png_get_rowbytes (png_ptr, info_ptr);
+	rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 	if (overflow2(rowbytes, height))
 		goto error;
-	image_data = (png_bytep) gdMalloc (rowbytes * height);
+	image_data = (png_bytep)gdMalloc(rowbytes * height);
 	if (!image_data) {
 		gd_error("gd-png error: cannot allocate image data\n");
 		goto error;
 	}
-	if (overflow2(height, sizeof (png_bytep)))
+	if (overflow2(height, sizeof(png_bytep)))
 		goto error;
 
-	row_pointers = (png_bytepp) gdMalloc (height * sizeof (png_bytep));
+	row_pointers = (png_bytepp)gdMalloc(height * sizeof(png_bytep));
 	if (!row_pointers) {
 		gd_error("gd-png error: cannot allocate row pointers\n");
 		goto error;
@@ -701,8 +710,8 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 		row_pointers[h] = image_data + h * rowbytes;
 	}
 
-	png_read_image (png_ptr, row_pointers);	/* read whole image... */
-	png_read_end (png_ptr, NULL);	/* ...done! */
+	png_read_image(png_ptr, row_pointers); /* read whole image... */
+	png_read_end(png_ptr, NULL);		   /* ...done! */
 
 	if (!im->trueColor) {
 		im->colorsTotal = num_palette;
@@ -724,7 +733,7 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 	im->interlace = (interlace_type == PNG_INTERLACE_ADAM7);
 
 	/* can't nuke structs until done with palette */
-	png_destroy_read_struct (&png_ptr, &info_ptr, NULL);
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	switch (color_type) {
 	case PNG_COLOR_TYPE_RGB:
 		for (h = 0; h < height; h++) {
@@ -733,7 +742,7 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 				register png_byte r = row_pointers[h][boffset++];
 				register png_byte g = row_pointers[h][boffset++];
 				register png_byte b = row_pointers[h][boffset++];
-				im->tpixels[h][w] = gdTrueColor (r, g, b);
+				im->tpixels[h][w] = gdTrueColor(r, g, b);
 			}
 		}
 		break;
@@ -752,7 +761,8 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 				 *  a lifetime of compatibility.
 				 */
 
-				register png_byte a = gdAlphaMax - (row_pointers[h][boffset++] >> 1);
+				register png_byte a =
+					gdAlphaMax - (row_pointers[h][boffset++] >> 1);
 				im->tpixels[h][w] = gdTrueColorAlpha(r, g, b, a);
 			}
 		}
@@ -773,17 +783,18 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 	if (!im->trueColor) {
 		for (i = num_palette; i < gdMaxColors; ++i) {
 			if (!open[i]) {
-				fprintf (stderr,
-				         "gd-png warning: image data references out-of-range"
-				         " color index (%d)\n", i);
+				fprintf(stderr,
+						"gd-png warning: image data references out-of-range"
+						" color index (%d)\n",
+						i);
 			}
 		}
 	}
 #endif
 
- done:
+done:
 	if (palette_allocated) {
-		gdFree (palette);
+		gdFree(palette);
 	}
 	if (image_data)
 		gdFree(image_data);
@@ -792,7 +803,7 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 
 	return im;
 
- error:
+error:
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	if (im) {
 		gdImageDestroy(im);
@@ -801,172 +812,173 @@ BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
 	goto done;
 }
 
-
 /*
   Function: gdImagePngEx
 
-    <gdImagePngEx> outputs the specified image to the specified file in
-    PNG format. The file must be open for writing. Under MSDOS and all
-    versions of Windows, it is important to use "wb" as opposed to
-    simply "w" as the mode when opening the file, and under Unix there
-    is no penalty for doing so. <gdImagePngEx> does not close the file;
-    your code must do so.
+	<gdImagePngEx> outputs the specified image to the specified file in
+	PNG format. The file must be open for writing. Under MSDOS and all
+	versions of Windows, it is important to use "wb" as opposed to
+	simply "w" as the mode when opening the file, and under Unix there
+	is no penalty for doing so. <gdImagePngEx> does not close the file;
+	your code must do so.
 
-    In addition, <gdImagePngEx> allows the level of compression to be
-    specified. A compression level of 0 means "no compression." A
-    compression level of 1 means "compressed, but as quickly as
-    possible." A compression level of 9 means "compressed as much as
-    possible to produce the smallest possible file." A compression level
-    of -1 will use the default compression level at the time zlib was
-    compiled on your system.
+	In addition, <gdImagePngEx> allows the level of compression to be
+	specified. A compression level of 0 means "no compression." A
+	compression level of 1 means "compressed, but as quickly as
+	possible." A compression level of 9 means "compressed as much as
+	possible to produce the smallest possible file." A compression level
+	of -1 will use the default compression level at the time zlib was
+	compiled on your system.
 
   Variants:
 
-    <gdImagePng> is equivalent to calling <gdImagePngEx> with
-    compression of -1.
+	<gdImagePng> is equivalent to calling <gdImagePngEx> with
+	compression of -1.
 
-    <gdImagePngCtx> and <gdImagePngCtxEx> write via a <gdIOCtx>
-    instead of a file handle.
+	<gdImagePngCtx> and <gdImagePngCtxEx> write via a <gdIOCtx>
+	instead of a file handle.
 
-    <gdImagePngPtr> and <gdImagePngPtrEx> store the image file to
-    memory.
+	<gdImagePngPtr> and <gdImagePngPtrEx> store the image file to
+	memory.
 
   Parameters:
 
-    im      - the image to write
-    outFile - the output FILE* object.
-    level   - compression level: 0 -> none, 1-9 -> level, -1 -> default
+	im      - the image to write
+	outFile - the output FILE* object.
+	level   - compression level: 0 -> none, 1-9 -> level, -1 -> default
 
   Returns:
 
-    Nothing.
+	Nothing.
 
   Example:
-    (start code)
+	(start code)
 
-    gdImagePtr im;
-    int black, white;
-    FILE *out;
+	gdImagePtr im;
+	int black, white;
+	FILE *out;
 
-    im = gdImageCreate(100, 100);              // Create the image
-    white = gdImageColorAllocate(im, 255, 255, 255); // Alloc background
-    black = gdImageColorAllocate(im, 0, 0, 0); // Allocate drawing color
-    gdImageRectangle(im, 0, 0, 99, 99, black); // Draw rectangle
-    out = fopen("rect.png", "wb");             // Open output file (binary)
-    gdImagePngEx(im, out, 9);                  // Write PNG, max compression
-    fclose(out);                               // Close file
-    gdImageDestroy(im);                        // Destroy image
+	im = gdImageCreate(100, 100);              // Create the image
+	white = gdImageColorAllocate(im, 255, 255, 255); // Alloc background
+	black = gdImageColorAllocate(im, 0, 0, 0); // Allocate drawing color
+	gdImageRectangle(im, 0, 0, 99, 99, black); // Draw rectangle
+	out = fopen("rect.png", "wb");             // Open output file (binary)
+	gdImagePngEx(im, out, 9);                  // Write PNG, max compression
+	fclose(out);                               // Close file
+	gdImageDestroy(im);                        // Destroy image
 
-    (end code)
+	(end code)
 */
-BGD_DECLARE(void) gdImagePngEx (gdImagePtr im, FILE * outFile, int level)
-{
-	gdIOCtx *out = gdNewFileCtx (outFile);
-	if (out == NULL) return;
-	gdImagePngCtxEx (im, out, level);
-	out->gd_free (out);
+BGD_DECLARE(void) gdImagePngEx(gdImagePtr im, FILE *outFile, int level) {
+	gdIOCtx *out = gdNewFileCtx(outFile);
+	if (out == NULL)
+		return;
+	gdImagePngCtxEx(im, out, level);
+	out->gd_free(out);
 }
 
 /*
   Function: gdImagePng
 
-    Equivalent to calling <gdImagePngEx> with compression of -1.
+	Equivalent to calling <gdImagePngEx> with compression of -1.
 
   Parameters:
 
-    im      - the image to save.
-    outFile - the output FILE*.
+	im      - the image to save.
+	outFile - the output FILE*.
 
   Returns:
 
-    Nothing.
+	Nothing.
 */
-BGD_DECLARE(void) gdImagePng (gdImagePtr im, FILE * outFile)
-{
-	gdIOCtx *out = gdNewFileCtx (outFile);
-	if (out == NULL) return;
-	gdImagePngCtxEx (im, out, -1);
-	out->gd_free (out);
+BGD_DECLARE(void) gdImagePng(gdImagePtr im, FILE *outFile) {
+	gdIOCtx *out = gdNewFileCtx(outFile);
+	if (out == NULL)
+		return;
+	gdImagePngCtxEx(im, out, -1);
+	out->gd_free(out);
 }
 
-static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level);
+static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx *outfile, int level);
 
 /*
   Function: gdImagePngPtr
 
-    Equivalent to calling <gdImagePngPtrEx> with compression of -1.
+	Equivalent to calling <gdImagePngPtrEx> with compression of -1.
 
-    See <gdImagePngEx> for more information.
+	See <gdImagePngEx> for more information.
 
   Parameters:
 
-    im      - the image to save.
-    size    - Output: size in bytes of the result.
+	im      - the image to save.
+	size    - Output: size in bytes of the result.
 
   Returns:
 
-    A pointer to memory containing the image data or NULL on error.
+	A pointer to memory containing the image data or NULL on error.
 
 */
-BGD_DECLARE(void *) gdImagePngPtr (gdImagePtr im, int *size)
-{
+BGD_DECLARE(void *) gdImagePngPtr(gdImagePtr im, int *size) {
 	void *rv;
-	gdIOCtx *out = gdNewDynamicCtx (2048, NULL);
-	if (out == NULL) return NULL;
-	if (!_gdImagePngCtxEx (im, out, -1)) {
-		rv = gdDPExtractData (out, size);
+	gdIOCtx *out = gdNewDynamicCtx(2048, NULL);
+	if (out == NULL)
+		return NULL;
+	if (!_gdImagePngCtxEx(im, out, -1)) {
+		rv = gdDPExtractData(out, size);
 	} else {
 		rv = NULL;
 	}
-	out->gd_free (out);
+	out->gd_free(out);
 	return rv;
 }
 
 /*
   Function: gdImagePngPtrEx
 
-    Identical to <gdImagePngEx> except that it returns a pointer to a
-    memory area with the PNG data. This memory must be freed by the
-    caller when it is no longer needed. **The caller must invoke
-    gdFree(), not free()**
+	Identical to <gdImagePngEx> except that it returns a pointer to a
+	memory area with the PNG data. This memory must be freed by the
+	caller when it is no longer needed. **The caller must invoke
+	gdFree(), not free()**
 
-    The 'size' parameter receives the total size of the block of
-    memory.
+	The 'size' parameter receives the total size of the block of
+	memory.
 
-    See <gdImagePngEx> for more information.
+	See <gdImagePngEx> for more information.
 
   Parameters:
 
-    im      - the image to save.
-    size    - Output: size in bytes of the result.
-    level   - compression level: 0 -> none, 1-9 -> level, -1 -> default
+	im      - the image to save.
+	size    - Output: size in bytes of the result.
+	level   - compression level: 0 -> none, 1-9 -> level, -1 -> default
 
   Returns:
 
-    A pointer to memory containing the image data or NULL on error.
+	A pointer to memory containing the image data or NULL on error.
 
 */
-BGD_DECLARE(void *) gdImagePngPtrEx (gdImagePtr im, int *size, int level)
-{
+BGD_DECLARE(void *) gdImagePngPtrEx(gdImagePtr im, int *size, int level) {
 	void *rv;
-	gdIOCtx *out = gdNewDynamicCtx (2048, NULL);
-	if (out == NULL) return NULL;
-	if (!_gdImagePngCtxEx (im, out, level)) {
-		rv = gdDPExtractData (out, size);
+	gdIOCtx *out = gdNewDynamicCtx(2048, NULL);
+	if (out == NULL)
+		return NULL;
+	if (!_gdImagePngCtxEx(im, out, level)) {
+		rv = gdDPExtractData(out, size);
 	} else {
 		rv = NULL;
 	}
-	out->gd_free (out);
+	out->gd_free(out);
 	return rv;
 }
 
-BGD_DECLARE(void *) gdImagePngPtrWithMetadata(gdImagePtr im, int *size, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void *)
+gdImagePngPtrWithMetadata(gdImagePtr im, int *size,
+						  const gdImageMetadata *metadata) {
 	return gdImagePngPtrExWithMetadata(im, size, -1, metadata);
 }
 
-BGD_DECLARE(void *) gdImagePngPtrExWithMetadata(gdImagePtr im, int *size, int level, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void *)
+gdImagePngPtrExWithMetadata(gdImagePtr im, int *size, int level,
+							const gdImageMetadata *metadata) {
 	void *rv;
 
 	rv = gdImagePngPtrEx(im, size, level);
@@ -983,8 +995,9 @@ BGD_DECLARE(void *) gdImagePngPtrExWithMetadata(gdImagePtr im, int *size, int le
 	return rv;
 }
 
-BGD_DECLARE(int) gdImageMetadataInjectPng(void **data, int *size, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(int)
+gdImageMetadataInjectPng(void **data, int *size,
+						 const gdImageMetadata *metadata) {
 	const unsigned char *png;
 	unsigned char *out;
 	const unsigned char *profile;
@@ -1011,24 +1024,29 @@ BGD_DECLARE(int) gdImageMetadataInjectPng(void **data, int *size, const gdImageM
 	}
 
 	profile = gdImageMetadataGetProfile(metadata, "exif", &profile_size);
-	if (gdPngMetadataChunkSize(&extra_size, profile, profile_size) != GD_META_OK) {
+	if (gdPngMetadataChunkSize(&extra_size, profile, profile_size) !=
+		GD_META_OK) {
 		return GD_META_ERR_LIMIT;
 	}
 	profile = gdImageMetadataGetProfile(metadata, "icc", &profile_size);
-	if (gdPngMetadataChunkSize(&extra_size, profile, profile_size) != GD_META_OK) {
+	if (gdPngMetadataChunkSize(&extra_size, profile, profile_size) !=
+		GD_META_OK) {
 		return GD_META_ERR_LIMIT;
 	}
 	profile = gdImageMetadataGetProfile(metadata, "xmp", &profile_size);
-	if (gdPngMetadataChunkSize(&extra_size, profile, profile_size) != GD_META_OK) {
+	if (gdPngMetadataChunkSize(&extra_size, profile, profile_size) !=
+		GD_META_OK) {
 		return GD_META_ERR_LIMIT;
 	}
 	for (i = 0; i < gdImageMetadataGetProfileCount(metadata); i++) {
 		const char *key = NULL;
 		const unsigned char *text_data = NULL;
 		size_t text_size = 0;
-		if (gdImageMetadataGetProfileAt(metadata, i, &key, &text_data, &text_size) == GD_META_OK &&
-		        key != NULL && strncmp(key, "png:text:", 9) == 0) {
-			if (gdPngMetadataChunkSize(&extra_size, text_data, text_size) != GD_META_OK) {
+		if (gdImageMetadataGetProfileAt(metadata, i, &key, &text_data,
+										&text_size) == GD_META_OK &&
+			key != NULL && strncmp(key, "png:text:", 9) == 0) {
+			if (gdPngMetadataChunkSize(&extra_size, text_data, text_size) !=
+				GD_META_OK) {
 				return GD_META_ERR_LIMIT;
 			}
 		}
@@ -1066,18 +1084,31 @@ BGD_DECLARE(int) gdImageMetadataInjectPng(void **data, int *size, const gdImageM
 
 		if (gdPngChunkIs(type, "IHDR") && !wrote_after_ihdr) {
 			int status;
-			profile = gdImageMetadataGetProfile(metadata, "exif", &profile_size);
-			if (profile != NULL && (status = gdPngAppendChunk(out, &out_pos, gdPngIsRawProfile(profile, profile_size, "exif") ? "zTXt" : "eXIf", profile, profile_size)) != GD_META_OK) {
+			profile =
+				gdImageMetadataGetProfile(metadata, "exif", &profile_size);
+			if (profile != NULL &&
+				(status = gdPngAppendChunk(
+					 out, &out_pos,
+					 gdPngIsRawProfile(profile, profile_size, "exif") ? "zTXt"
+																	  : "eXIf",
+					 profile, profile_size)) != GD_META_OK) {
 				gdFree(out);
 				return status;
 			}
 			profile = gdImageMetadataGetProfile(metadata, "icc", &profile_size);
-			if (profile != NULL && (status = gdPngAppendChunk(out, &out_pos, "iCCP", profile, profile_size)) != GD_META_OK) {
+			if (profile != NULL &&
+				(status = gdPngAppendChunk(out, &out_pos, "iCCP", profile,
+										   profile_size)) != GD_META_OK) {
 				gdFree(out);
 				return status;
 			}
 			profile = gdImageMetadataGetProfile(metadata, "xmp", &profile_size);
-			if (profile != NULL && (status = gdPngAppendChunk(out, &out_pos, gdPngIsRawProfile(profile, profile_size, "xmp") ? "zTXt" : "iTXt", profile, profile_size)) != GD_META_OK) {
+			if (profile != NULL &&
+				(status = gdPngAppendChunk(
+					 out, &out_pos,
+					 gdPngIsRawProfile(profile, profile_size, "xmp") ? "zTXt"
+																	 : "iTXt",
+					 profile, profile_size)) != GD_META_OK) {
 				gdFree(out);
 				return status;
 			}
@@ -1085,9 +1116,11 @@ BGD_DECLARE(int) gdImageMetadataInjectPng(void **data, int *size, const gdImageM
 				const char *key = NULL;
 				const unsigned char *text_data = NULL;
 				size_t text_size = 0;
-				if (gdImageMetadataGetProfileAt(metadata, i, &key, &text_data, &text_size) == GD_META_OK &&
-				        key != NULL && strncmp(key, "png:text:", 9) == 0) {
-					status = gdPngAppendChunk(out, &out_pos, "tEXt", text_data, text_size);
+				if (gdImageMetadataGetProfileAt(metadata, i, &key, &text_data,
+												&text_size) == GD_META_OK &&
+					key != NULL && strncmp(key, "png:text:", 9) == 0) {
+					status = gdPngAppendChunk(out, &out_pos, "tEXt", text_data,
+											  text_size);
 					if (status != GD_META_OK) {
 						gdFree(out);
 						return status;
@@ -1109,62 +1142,57 @@ BGD_DECLARE(int) gdImageMetadataInjectPng(void **data, int *size, const gdImageM
 	return GD_META_ERR_PARSE;
 }
 
-
-
 /*
   Function: gdImagePngCtx
 
-    Equivalent to calling <gdImagePngCtxEx> with compression of -1.
-    See <gdImagePngEx> for more information.
+	Equivalent to calling <gdImagePngCtxEx> with compression of -1.
+	See <gdImagePngEx> for more information.
 
   Parameters:
 
-    im      - the image to save.
-    outfile - the <gdIOCtx> to write to.
+	im      - the image to save.
+	outfile - the <gdIOCtx> to write to.
 
   Returns:
 
-    Nothing.
+	Nothing.
 
 */
-BGD_DECLARE(void) gdImagePngCtx (gdImagePtr im, gdIOCtx * outfile)
-{
+BGD_DECLARE(void) gdImagePngCtx(gdImagePtr im, gdIOCtx *outfile) {
 	/* 2.0.13: 'return' here was an error, thanks to Kevin Smith */
-	gdImagePngCtxEx (im, outfile, -1);
+	gdImagePngCtxEx(im, outfile, -1);
 }
 
-BGD_DECLARE(void) gdImagePngCtxWithMetadata(gdImagePtr im, gdIOCtx *outfile, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void)
+gdImagePngCtxWithMetadata(gdImagePtr im, gdIOCtx *outfile,
+						  const gdImageMetadata *metadata) {
 	gdImagePngCtxExWithMetadata(im, outfile, -1, metadata);
 }
-
-
-
 
 /*
   Function: gdImagePngCtxEx
 
-    Outputs the given image as PNG data, but using a <gdIOCtx> instead
-    of a file.  See <gdImagePngEx>.
+	Outputs the given image as PNG data, but using a <gdIOCtx> instead
+	of a file.  See <gdImagePngEx>.
 
   Parameters:
 
-    im      - the image to save.
-    outfile - the <gdIOCtx> to write to.
-    level   - compression level: 0 -> none, 1-9 -> level, -1 -> default
+	im      - the image to save.
+	outfile - the <gdIOCtx> to write to.
+	level   - compression level: 0 -> none, 1-9 -> level, -1 -> default
 
   Returns:
 
-    Nothing.
+	Nothing.
 
 */
-BGD_DECLARE(void) gdImagePngCtxEx (gdImagePtr im, gdIOCtx * outfile, int level)
-{
+BGD_DECLARE(void) gdImagePngCtxEx(gdImagePtr im, gdIOCtx *outfile, int level) {
 	_gdImagePngCtxEx(im, outfile, level);
 }
 
-BGD_DECLARE(void) gdImagePngCtxExWithMetadata(gdImagePtr im, gdIOCtx *outfile, int level, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void)
+gdImagePngCtxExWithMetadata(gdImagePtr im, gdIOCtx *outfile, int level,
+							const gdImageMetadata *metadata) {
 	void *data;
 	int size = 0;
 
@@ -1181,14 +1209,13 @@ BGD_DECLARE(void) gdImagePngCtxExWithMetadata(gdImagePtr im, gdIOCtx *outfile, i
  *  (http://www.libpng.org/pub/png/book/).
  */
 /* returns 0 on success, 1 on failure */
-static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
-{
+static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx *outfile, int level) {
 	int i, j, bit_depth = 0, interlace_type;
 	int width = im->sx;
 	int height = im->sy;
 	int colors = im->colorsTotal;
 	int *open = im->open;
-	int mapping[gdMaxColors];	/* mapping[gd_index] == png_index */
+	int mapping[gdMaxColors]; /* mapping[gd_index] == png_index */
 	png_byte trans_values[256];
 	png_color_16 trans_rgb_value;
 	png_color palette[gdMaxColors];
@@ -1204,31 +1231,31 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 
 	/* width or height of value 0 is invalid in IHDR;
 	   see http://www.w3.org/TR/PNG-Chunks.html */
-	if (width == 0 || height ==0) return 1;
+	if (width == 0 || height == 0)
+		return 1;
 
 #ifdef PNG_SETJMP_SUPPORTED
-	png_ptr = png_create_write_struct (PNG_LIBPNG_VER_STRING,
-	                                   &jbw, gdPngErrorHandler,
-	                                   gdPngWarningHandler);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, &jbw,
+									  gdPngErrorHandler, gdPngWarningHandler);
 #else
-	png_ptr = png_create_write_struct (PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 #endif
 	if (png_ptr == NULL) {
 		gd_error("gd-png error: cannot allocate libpng main struct\n");
 		return 1;
 	}
 
-	info_ptr = png_create_info_struct (png_ptr);
+	info_ptr = png_create_info_struct(png_ptr);
 	if (info_ptr == NULL) {
 		gd_error("gd-png error: cannot allocate libpng info struct\n");
-		png_destroy_write_struct (&png_ptr, (png_infopp) NULL);
+		png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
 		return 1;
 	}
 
 #ifdef PNG_SETJMP_SUPPORTED
 	if (setjmp(jbw.jmpbuf)) {
 		gd_error("gd-png error: setjmp returns error condition\n");
-		png_destroy_write_struct (&png_ptr, &info_ptr);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
 
 		if (row_pointers) {
 			for (i = 0; i < height; ++i)
@@ -1240,8 +1267,7 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 	}
 #endif
 
-	png_set_write_fn (png_ptr, (void *) outfile, gdPngWriteData,
-	                  gdPngFlushData);
+	png_set_write_fn(png_ptr, (void *)outfile, gdPngWriteData, gdPngFlushData);
 
 	png_set_user_limits(png_ptr, 0x7fffffffL, 0x7fffffffL);
 
@@ -1258,12 +1284,12 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 #endif
 
 	/* 2.0.12: this is finally a parameter */
-	png_set_compression_level (png_ptr, level);
+	png_set_compression_level(png_ptr, level);
 
 #ifdef PNG_pHYs_SUPPORTED
 	/* 2.1.0: specify the resolution */
 	png_set_pHYs(png_ptr, info_ptr, DPI2DPM(im->res_x), DPI2DPM(im->res_y),
-	             PNG_RESOLUTION_METER);
+				 PNG_RESOLUTION_METER);
 #endif
 
 	/* can set this to a smaller value without compromising compression if all
@@ -1272,7 +1298,7 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 
 	if (!im->trueColor) {
 		if (transparent >= im->colorsTotal ||
-		        (transparent >= 0 && open[transparent]))
+			(transparent >= 0 && open[transparent]))
 			transparent = -1;
 	}
 	if (!im->trueColor) {
@@ -1280,7 +1306,8 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 			mapping[i] = -1;
 	}
 	if (!im->trueColor) {
-		/* count actual number of colors used (colorsTotal == high-water mark) */
+		/* count actual number of colors used (colorsTotal == high-water mark)
+		 */
 		colors = 0;
 		for (i = 0; i < im->colorsTotal; ++i) {
 			if (!open[i]) {
@@ -1309,27 +1336,25 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 
 	if (im->trueColor) {
 		if (im->saveAlphaFlag) {
-			png_set_IHDR (png_ptr, info_ptr, width, height, 8,
-			              PNG_COLOR_TYPE_RGB_ALPHA, interlace_type,
-			              PNG_COMPRESSION_TYPE_DEFAULT,
-			              PNG_FILTER_TYPE_DEFAULT);
+			png_set_IHDR(png_ptr, info_ptr, width, height, 8,
+						 PNG_COLOR_TYPE_RGB_ALPHA, interlace_type,
+						 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 		} else {
-			png_set_IHDR (png_ptr, info_ptr, width, height, 8,
-			              PNG_COLOR_TYPE_RGB, interlace_type,
-			              PNG_COMPRESSION_TYPE_DEFAULT,
-			              PNG_FILTER_TYPE_DEFAULT);
+			png_set_IHDR(png_ptr, info_ptr, width, height, 8,
+						 PNG_COLOR_TYPE_RGB, interlace_type,
+						 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 		}
 	} else {
-		png_set_IHDR (png_ptr, info_ptr, width, height, bit_depth,
-		              PNG_COLOR_TYPE_PALETTE, interlace_type,
-		              PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+		png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth,
+					 PNG_COLOR_TYPE_PALETTE, interlace_type,
+					 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	}
 	if (im->trueColor && (!im->saveAlphaFlag) && (transparent >= 0)) {
 		/* 2.0.9: fixed by Thomas Winzig */
-		trans_rgb_value.red = gdTrueColorGetRed (im->transparent);
-		trans_rgb_value.green = gdTrueColorGetGreen (im->transparent);
-		trans_rgb_value.blue = gdTrueColorGetBlue (im->transparent);
-		png_set_tRNS (png_ptr, info_ptr, 0, 0, &trans_rgb_value);
+		trans_rgb_value.red = gdTrueColorGetRed(im->transparent);
+		trans_rgb_value.green = gdTrueColorGetGreen(im->transparent);
+		trans_rgb_value.blue = gdTrueColorGetBlue(im->transparent);
+		png_set_tRNS(png_ptr, info_ptr, 0, 0, &trans_rgb_value);
 	}
 	if (!im->trueColor) {
 		/* Oy veh. Remap the PNG palette to put the
@@ -1366,15 +1391,15 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 				if (!im->open[i]) {
 					if (im->alpha[i] != gdAlphaOpaque) {
 						/* Andrew Hull: >> 6, not >> 7! (gd 2.0.5) */
-						trans_values[j] = 255 -
-						                  ((im->alpha[i] << 1) + (im->alpha[i] >> 6));
+						trans_values[j] =
+							255 - ((im->alpha[i] << 1) + (im->alpha[i] >> 6));
 						mapping[i] = j++;
 					} else {
 						mapping[i] = k--;
 					}
 				}
 			}
-			png_set_tRNS (png_ptr, info_ptr, trans_values, tc, NULL);
+			png_set_tRNS(png_ptr, info_ptr, trans_values, tc, NULL);
 		}
 	}
 
@@ -1394,14 +1419,14 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 				palette[i].green = im->green[i];
 				palette[i].blue = im->blue[i];
 			}
-		png_set_PLTE (png_ptr, info_ptr, palette, colors);
+		png_set_PLTE(png_ptr, info_ptr, palette, colors);
 	}
 
 	/* write out the PNG header info (everything up to first IDAT) */
-	png_write_info (png_ptr, info_ptr);
+	png_write_info(png_ptr, info_ptr);
 
 	/* make sure < 8-bit images are packed into pixels as tightly as possible */
-	png_set_packing (png_ptr);
+	png_set_packing(png_ptr);
 
 	/* This code allocates a set of row buffers and copies the gd image data
 	 * into them only in the case that remapping is necessary; in gd 1.3 and
@@ -1420,12 +1445,13 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 		int thisPixel;
 		png_bytep *prow_pointers;
 		int saveAlphaFlag = im->saveAlphaFlag;
-		if (overflow2(sizeof (png_bytep), height)) {
+		if (overflow2(sizeof(png_bytep), height)) {
 			ret = 1;
 			goto bail;
 		}
-		/* Need to use calloc so we can clean it up sanely in the error handler. */
-		row_pointers = gdCalloc(height, sizeof (png_bytep));
+		/* Need to use calloc so we can clean it up sanely in the error handler.
+		 */
+		row_pointers = gdCalloc(height, sizeof(png_bytep));
 		if (row_pointers == NULL) {
 			gd_error("gd-png error: unable to allocate row_pointers\n");
 			ret = 1;
@@ -1433,11 +1459,12 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 		}
 		prow_pointers = row_pointers;
 		for (j = 0; j < height; ++j) {
-			if (overflow2(width, channels) || ((*prow_pointers =
-			                                        (png_bytep) gdMalloc (width * channels)) == NULL)) {
+			if (overflow2(width, channels) ||
+				((*prow_pointers = (png_bytep)gdMalloc(width * channels)) ==
+				 NULL)) {
 				gd_error("gd-png error: unable to allocate rows\n");
 				for (i = 0; i < j; ++i)
-					gdFree (row_pointers[i]);
+					gdFree(row_pointers[i]);
 				/* 2.0.29: memory leak TBB */
 				gdFree(row_pointers);
 				ret = 1;
@@ -1447,49 +1474,49 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 			pThisRow = *ptpixels++;
 			for (i = 0; i < width; ++i) {
 				thisPixel = *pThisRow++;
-				*pOutputRow++ = gdTrueColorGetRed (thisPixel);
-				*pOutputRow++ = gdTrueColorGetGreen (thisPixel);
-				*pOutputRow++ = gdTrueColorGetBlue (thisPixel);
+				*pOutputRow++ = gdTrueColorGetRed(thisPixel);
+				*pOutputRow++ = gdTrueColorGetGreen(thisPixel);
+				*pOutputRow++ = gdTrueColorGetBlue(thisPixel);
 
 				if (saveAlphaFlag) {
-					/* convert the 7-bit alpha channel to an 8-bit alpha channel.
-					   We do a little bit-flipping magic, repeating the MSB
-					   as the LSB, to ensure that 0 maps to 0 and
-					   127 maps to 255. We also have to invert to match
-					   PNG's convention in which 255 is opaque. */
-					a = gdTrueColorGetAlpha (thisPixel);
+					/* convert the 7-bit alpha channel to an 8-bit alpha
+					   channel. We do a little bit-flipping magic, repeating the
+					   MSB as the LSB, to ensure that 0 maps to 0 and 127 maps
+					   to 255. We also have to invert to match PNG's convention
+					   in which 255 is opaque. */
+					a = gdTrueColorGetAlpha(thisPixel);
 					/* Andrew Hull: >> 6, not >> 7! (gd 2.0.5) */
 					*pOutputRow++ = 255 - ((a << 1) + (a >> 6));
 				}
 			}
 		}
 
-		png_write_image (png_ptr, row_pointers);
-		png_write_end (png_ptr, info_ptr);
+		png_write_image(png_ptr, row_pointers);
+		png_write_end(png_ptr, info_ptr);
 
 		for (j = 0; j < height; ++j)
-			gdFree (row_pointers[j]);
-		gdFree (row_pointers);
+			gdFree(row_pointers[j]);
+		gdFree(row_pointers);
 	} else {
 		if (remap) {
 			png_bytep *row_pointers;
-			if (overflow2(sizeof (png_bytep), height)) {
+			if (overflow2(sizeof(png_bytep), height)) {
 				ret = 1;
 				goto bail;
 			}
-			row_pointers = gdMalloc (sizeof (png_bytep) * height);
+			row_pointers = gdMalloc(sizeof(png_bytep) * height);
 			if (row_pointers == NULL) {
 				gd_error("gd-png error: unable to allocate row_pointers\n");
 				ret = 1;
 				goto bail;
 			}
 			for (j = 0; j < height; ++j) {
-				if ((row_pointers[j] = (png_bytep) gdMalloc (width)) == NULL) {
+				if ((row_pointers[j] = (png_bytep)gdMalloc(width)) == NULL) {
 					gd_error("gd-png error: unable to allocate rows\n");
 					for (i = 0; i < j; ++i)
-						gdFree (row_pointers[i]);
+						gdFree(row_pointers[i]);
 					/* TBB: memory leak */
-					gdFree (row_pointers);
+					gdFree(row_pointers);
 					ret = 1;
 					goto bail;
 				}
@@ -1497,106 +1524,102 @@ static int _gdImagePngCtxEx(gdImagePtr im, gdIOCtx * outfile, int level)
 					row_pointers[j][i] = mapping[im->pixels[j][i]];
 			}
 
-			png_write_image (png_ptr, row_pointers);
+			png_write_image(png_ptr, row_pointers);
 
 			for (j = 0; j < height; ++j)
-				gdFree (row_pointers[j]);
-			gdFree (row_pointers);
+				gdFree(row_pointers[j]);
+			gdFree(row_pointers);
 
-			png_write_end (png_ptr, info_ptr);
+			png_write_end(png_ptr, info_ptr);
 		} else {
-			png_write_image (png_ptr, im->pixels);
-			png_write_end (png_ptr, info_ptr);
+			png_write_image(png_ptr, im->pixels);
+			png_write_end(png_ptr, info_ptr);
 		}
 	}
 	/* 1.6.3: maybe we should give that memory BACK! TBB */
 bail:
-	png_destroy_write_struct (&png_ptr, &info_ptr);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
 	return ret;
 }
 
 #else /* !HAVE_LIBPNG */
 
-static void _noPngError(void)
-{
+static void _noPngError(void) {
 	gd_error("PNG image support has been disabled\n");
 }
 
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPng (FILE * inFile)
-{
+BGD_DECLARE(gdImagePtr) gdImageCreateFromPng(FILE *inFile) {
 	ARG_NOT_USED(inFile);
 	_noPngError();
 	return NULL;
 }
 
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngPtr (int size, void *data)
-{
+BGD_DECLARE(gdImagePtr) gdImageCreateFromPngPtr(int size, void *data) {
 	ARG_NOT_USED(size);
 	ARG_NOT_USED(data);
 	return NULL;
 }
 
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngPtrWithMetadata(int size, void *data, gdImageMetadata *metadata)
-{
+BGD_DECLARE(gdImagePtr)
+gdImageCreateFromPngPtrWithMetadata(int size, void *data,
+									gdImageMetadata *metadata) {
 	ARG_NOT_USED(size);
 	ARG_NOT_USED(data);
 	ARG_NOT_USED(metadata);
 	return NULL;
 }
 
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtxWithMetadata(gdIOCtx *infile, gdImageMetadata *metadata)
-{
+BGD_DECLARE(gdImagePtr)
+gdImageCreateFromPngCtxWithMetadata(gdIOCtx *infile,
+									gdImageMetadata *metadata) {
 	ARG_NOT_USED(infile);
 	ARG_NOT_USED(metadata);
 	return NULL;
 }
 
-BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx (gdIOCtx * infile)
-{
+BGD_DECLARE(gdImagePtr) gdImageCreateFromPngCtx(gdIOCtx *infile) {
 	ARG_NOT_USED(infile);
 	return NULL;
 }
 
-BGD_DECLARE(void) gdImagePngEx (gdImagePtr im, FILE * outFile, int level)
-{
+BGD_DECLARE(void) gdImagePngEx(gdImagePtr im, FILE *outFile, int level) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(outFile);
 	ARG_NOT_USED(level);
 	_noPngError();
 }
 
-BGD_DECLARE(void) gdImagePng (gdImagePtr im, FILE * outFile)
-{
+BGD_DECLARE(void) gdImagePng(gdImagePtr im, FILE *outFile) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(outFile);
 	_noPngError();
 }
 
-BGD_DECLARE(void *) gdImagePngPtr (gdImagePtr im, int *size)
-{
+BGD_DECLARE(void *) gdImagePngPtr(gdImagePtr im, int *size) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(size);
 	return NULL;
 }
 
-BGD_DECLARE(void *) gdImagePngPtrEx (gdImagePtr im, int *size, int level)
-{
+BGD_DECLARE(void *) gdImagePngPtrEx(gdImagePtr im, int *size, int level) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(size);
 	ARG_NOT_USED(level);
 	return NULL;
 }
 
-BGD_DECLARE(void *) gdImagePngPtrWithMetadata(gdImagePtr im, int *size, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void *)
+gdImagePngPtrWithMetadata(gdImagePtr im, int *size,
+						  const gdImageMetadata *metadata) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(size);
 	ARG_NOT_USED(metadata);
 	return NULL;
 }
 
-BGD_DECLARE(void *) gdImagePngPtrExWithMetadata(gdImagePtr im, int *size, int level, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void *)
+gdImagePngPtrExWithMetadata(gdImagePtr im, int *size, int level,
+							const gdImageMetadata *metadata) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(size);
 	ARG_NOT_USED(level);
@@ -1604,39 +1627,40 @@ BGD_DECLARE(void *) gdImagePngPtrExWithMetadata(gdImagePtr im, int *size, int le
 	return NULL;
 }
 
-BGD_DECLARE(int) gdImageMetadataInjectPng(void **data, int *size, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(int)
+gdImageMetadataInjectPng(void **data, int *size,
+						 const gdImageMetadata *metadata) {
 	ARG_NOT_USED(data);
 	ARG_NOT_USED(size);
 	ARG_NOT_USED(metadata);
 	return GD_META_ERR_UNSUPPORTED;
 }
 
-BGD_DECLARE(void) gdImagePngCtx (gdImagePtr im, gdIOCtx * outfile)
-{
+BGD_DECLARE(void) gdImagePngCtx(gdImagePtr im, gdIOCtx *outfile) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(outfile);
 	_noPngError();
 }
 
-BGD_DECLARE(void) gdImagePngCtxWithMetadata(gdImagePtr im, gdIOCtx *outfile, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void)
+gdImagePngCtxWithMetadata(gdImagePtr im, gdIOCtx *outfile,
+						  const gdImageMetadata *metadata) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(outfile);
 	ARG_NOT_USED(metadata);
 	_noPngError();
 }
 
-BGD_DECLARE(void) gdImagePngCtxEx (gdImagePtr im, gdIOCtx * outfile, int level)
-{
+BGD_DECLARE(void) gdImagePngCtxEx(gdImagePtr im, gdIOCtx *outfile, int level) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(outfile);
 	ARG_NOT_USED(level);
 	_noPngError();
 }
 
-BGD_DECLARE(void) gdImagePngCtxExWithMetadata(gdImagePtr im, gdIOCtx *outfile, int level, const gdImageMetadata *metadata)
-{
+BGD_DECLARE(void)
+gdImagePngCtxExWithMetadata(gdImagePtr im, gdIOCtx *outfile, int level,
+							const gdImageMetadata *metadata) {
 	ARG_NOT_USED(im);
 	ARG_NOT_USED(outfile);
 	ARG_NOT_USED(level);
