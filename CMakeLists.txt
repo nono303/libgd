@@ -29,7 +29,7 @@ OPTION(ENABLE_ASAN "Enable (gcc) ASAN support" 0)
 OPTION(ENABLE_CPP "Enable CPP GD API" 1)
 OPTION(VERBOSE_MAKEFILE "Enable CMAKE_VERBOSE_MAKEFILE" 0)
 
-OPTION(BUILD_TEST "Build tests" 0)
+OPTION(BUILD_TESTS "Build tests" 0)
 OPTION(BUILD_EXEMPLES "Build exemples" 0)
 OPTION(BUILD_PROGRAMS "Build programs" 0)
 OPTION(BUILD_DOCS "Build docs" 0)
@@ -39,9 +39,9 @@ if (VERBOSE_MAKEFILE)
 	set(CMAKE_VERBOSE_MAKEFILE ON)
 endif (VERBOSE_MAKEFILE)
 
-if (BUILD_TEST)
+if (BUILD_TESTS)
 	ENABLE_TESTING()
-endif(BUILD_TEST)
+endif(BUILD_TESTS)
 
 # if you would like to pass C flags to the compiler, then just
 # - specify -DCMAKE_C_FLAGS=... on invocation of cmake, or
@@ -410,9 +410,9 @@ else (USE_EXT_GD)
 	add_subdirectory(src)
 endif (USE_EXT_GD)
 
-if(BUILD_TEST)
+if(BUILD_TESTS)
 add_subdirectory(tests)
-endif (BUILD_TEST)
+endif (BUILD_TESTS)
 if(BUILD_EXEMPLES)
 add_subdirectory(examples)
 endif(BUILD_EXEMPLES)
