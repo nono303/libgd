@@ -29,6 +29,12 @@ OPTION(ENABLE_ASAN "Enable (gcc) ASAN support" 0)
 OPTION(ENABLE_CPP "Enable CPP GD API" 1)
 OPTION(VERBOSE_MAKEFILE "Enable CMAKE_VERBOSE_MAKEFILE" 0)
 
+OPTION(BUILD_TEST "Build tests" 0)
+OPTION(BUILD_EXEMPLES "Build exemples" 0)
+OPTION(BUILD_PROGRAMS "Build programs" 0)
+OPTION(BUILD_DOCS "Build docs" 0)
+OPTION(BUILD_CPACK "Build CPACK" 0)
+
 if (VERBOSE_MAKEFILE)
 	set(CMAKE_VERBOSE_MAKEFILE ON)
 endif (VERBOSE_MAKEFILE)
@@ -404,12 +410,18 @@ else (USE_EXT_GD)
 	add_subdirectory(src)
 endif (USE_EXT_GD)
 
+if(BUILD_TEST)
 add_subdirectory(tests)
+endif (BUILD_TEST)
+if(BUILD_EXEMPLES)
 add_subdirectory(examples)
+endif(BUILD_EXEMPLES)
+if(BUILD_DOCS)
 add_subdirectory(docs)
+endif(BUILD_DOCS)
 
 add_custom_target(distclean ${GD_SOURCE_DIR}/cmake/distclean.sh)
-
+if(BUILD_CPACK)
 SET(CPACK_PACKAGE_NAME "libgd")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "libGD, powerful and easy to use graphic library")
 SET(CPACK_PACKAGE_VENDOR "https://libgd.github.io")
@@ -422,15 +434,17 @@ if(WIN32)
 else(WIN32)
 	set(CPACK_GENERATOR TGZ)
 endif(WIN32)
+endif (BUILD_CPACK)
 
-
+if(BUILD_DOCS)
 INSTALL(FILES docs/INSTALL DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES docs/README.JPN DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES docs/README.CMAKE DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES docs/README.TESTING DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES docs/README.TXT DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
+endif(BUILD_DOCS)
 
-
+if(BUILD_EXEMPLES)
 INSTALL(FILES examples/arc.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES examples/copyrotated.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES examples/crop.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
@@ -451,8 +465,9 @@ INSTALL(FILES examples/tiffread.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLI
 INSTALL(FILES examples/tiff_write_pages.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES examples/uhdr.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
 INSTALL(FILES examples/windows.c DESTINATION share/doc/gd-${GDLIB_MAJOR}.${GDLIB_MINOR})
+endif(BUILD_EXEMPLES)
 
-
+if(BUILD_CPACK)
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/COPYING")
 
 set(CPACK_SOURCE_GENERATOR TGZ)
@@ -466,3 +481,4 @@ set(CPACK_SOURCE_IGNORE_FILES
 )
 install(FILES ${top_level_DOCFILES} DESTINATION ${DOC_DIR})
 INCLUDE(CPack)
+endif(BUILD_CPACK)
