@@ -115,9 +115,9 @@ else (USE_EXT_GD)
 
 	MACRO(GV VER VAR)
 		file (STRINGS "src/gd.h" _VERSION_LINE REGEX "define[ ]+GD_${VER}_VERSION")
-		if ( _VERSION_LINE )
-			string ( REGEX REPLACE ".*define[ ]+GD_${VER}_VERSION[ ]+\"?([^ \"]*)\"?[ ]+.*" "\\1" ${VAR} "${_VERSION_LINE}" )
-		endif ()
+		if (_VERSION_LINE)
+			string ( REGEX REPLACE ".*define[ ]+GD_${VER}_VERSION[ ]+\"?([0-9]*).*" "\\1" ${VAR} "${_VERSION_LINE}" )
+		endif (_VERSION_LINE)
 	ENDMACRO(GV)
 
 	GV(MAJOR GDLIB_MAJOR)
